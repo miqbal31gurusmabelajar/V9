@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Akses Turnamen Voli SMAN 9 Jambi</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- QRCode Generator Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- Html5-Qrcode Scanner Library -->
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: '#1e40af',
+                        secondary: '#0284c7',
+                        accent: '#f59e0b',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            #print-area, #print-area * {
+                visibility: visible;
+            }
+            #print-area {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+            }
+            .no-print {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col relative overflow-x-hidden">
+
+    <!-- Background Watermark Vector Logo SMAN 9 - Centered -->
+    <div class="fixed inset-0 pointer-events-none flex items-center justify-center z-0 overflow-hidden">
+        <div class="w-[320px] h-[320px] sm:w-[500px] sm:h-[500px] rounded-full flex flex-col items-center justify-center opacity-[0.05] p-8 border-4 border-primary/30 shadow-inner bg-blue-50/50">
+            <div class="w-24 h-24 sm:w-36 sm:h-36 rounded-full bg-gradient-to-tr from-primary to-secondary flex items-center justify-center shadow-lg mb-3 border-2 border-amber-400">
+                <i class="fa-solid fa-volleyball text-amber-300 text-5xl sm:text-7xl animate-pulse"></i>
+            </div>
+            <p class="font-extrabold text-sm sm:text-lg text-primary tracking-widest uppercase text-center">SMAN 9 KOTA JAMBI</p>
+            <p class="font-bold text-[10px] sm:text-xs text-amber-600 tracking-wider uppercase">Turnamen Bola Voli</p>
+        </div>
+    </div>
+
+    <!-- Navbar Header -->
+    <header class="bg-primary text-white shadow-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center relative z-10">
+            <div class="flex items-center space-x-3">
+                <div class="bg-gradient-to-br from-amber-400 to-amber-600 text-slate-900 font-extrabold p-2 rounded-xl shadow w-10 h-10 flex items-center justify-center border border-amber-300">
+                    <i class="fa-solid fa-volleyball text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-sm sm:text-lg leading-tight">VOLI SMAN 9 JAMBI</h1>
+                    <p class="text-[10px] sm:text-xs text-blue-200">Sistem Akses Turnamen & QR Scanner</p>
+                </div>
+            </div>
+            <div id="user-status" class="hidden flex items-center space-x-3">
+                <span id="user-badge" class="text-xs bg-blue-700 px-3 py-1 rounded-full font-medium border border-blue-500"></span>
+                <button onclick="logout()" class="bg-red-500 hover:bg-red-600 text-white text-xs px-3 py-1.5 rounded-lg transition font-medium">
+                    <i class="fa-solid fa-right-from-bracket mr-1"></i> Keluar
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="flex-grow max-w-7xl w-full mx-auto p-4 sm:p-6 relative z-10">
+
+        <!-- Custom Notification Modal -->
+        <div id="custom-modal" class="fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center p-4">
+            <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl text-center transform transition-all scale-95" id="modal-card">
+                <div id="modal-icon" class="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl"></div>
+                <h3 id="modal-title" class="text-xl font-bold text-slate-900 mb-2"></h3>
+                <p id="modal-message" class="text-slate-600 text-sm mb-6"></p>
+                <button onclick="closeModal()" class="w-full py-3 bg-primary text-white rounded-xl font-semibold hover:bg-blue-900 transition">Mengerti</button>
+            </div>
+        </div>
+
+        <!-- Loading Overlay -->
+        <div id="loading-overlay" class="fixed inset-0 bg-black/40 z-50 hidden flex items-center justify-center">
+            <div class="bg-white px-6 py-4 rounded-2xl shadow-xl flex items-center gap-3">
+                <i class="fa-solid fa-circle-notch fa-spin text-primary text-2xl"></i>
+                <span class="text-sm font-semibold text-slate-700">Sinkronisasi Cloud...</span>
+            </div>
+        </div>
+
+        <!-- 1. LOGIN VIEW -->
+        <section id="view-login" class="max-w-md mx-auto mt-10 bg-white p-8 rounded-2xl shadow-xl border border-slate-100">
+            <div class="text-center mb-8">
+                <div class="inline-flex bg-blue-50 p-4 rounded-full text-primary mb-3">
+                    <i class="fa-solid fa-shield-halved text-3xl"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-slate-900">Akses Masuk Turnamen</h2>
+                <p class="text-slate-500 text-sm mt-1">SMAN 9 Kota Jambi</p>
+            </div>
+
+            <form id="login-form" onsubmit="handleLogin(event)" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">Pilih Peran Login</label>
+                    <select id="login-role" onchange="toggleCodeField()" class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-primary focus:outline-none transition">
+                        <option value="panitia">Panitia</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                </div>
+
+                <div id="code-container">
+                    <label id="code-label" class="block text-sm font-semibold text-slate-700 mb-1">Kode Akses / PIN</label>
+                    <input type="password" id="login-code" placeholder="Masukkan Kode Akses" class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-primary focus:outline-none transition">
+                    <p id="code-hint" class="text-xs text-slate-400 mt-1">Masukkan kode akses Anda.</p>
+                </div>
+
+                <button type="submit" class="w-full py-3 bg-primary text-white font-semibold rounded-xl hover:bg-blue-900 shadow-lg shadow-blue-500/30 transition">
+                    Masuk Aplikasi
+                </button>
+            </form>
+        </section>
+
+        <!-- 2. ADMIN VIEW -->
+        <section id="view-admin" class="hidden space-y-6">
+            <div class="bg-gradient-to-r from-primary to-secondary text-white p-6 rounded-2xl shadow-lg flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <span class="bg-white/20 text-white text-xs px-3 py-1 rounded-full uppercase tracking-wider font-semibold">Panel Administrator</span>
+                    <h2 class="text-2xl font-bold mt-1">Kelola Tim & Pengaturan Sistem</h2>
+                    <p class="text-blue-100 text-sm">Atur kuota tim dan PIN panitia turnamen.</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="syncDataFromCloud()" class="bg-white/10 hover:bg-white/20 text-white border border-white/30 text-xs px-4 py-2.5 rounded-xl font-medium transition flex items-center gap-2">
+                        <i class="fa-solid fa-rotate"></i> Sinkron Cloud
+                    </button>
+                </div>
+            </div>
+
+            <!-- Menu Pengaturan PIN Panitia -->
+            <div class="grid grid-cols-1 md:grid-cols-1 gap-6 max-w-md">
+                <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-100">
+                    <h3 class="text-lg font-bold text-slate-800 mb-3 flex items-center gap-2">
+                        <i class="fa-solid fa-key text-primary"></i> Pengaturan Kode Akses Panitia
+                    </h3>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">PIN / Kode Akses Panitia</label>
+                            <input type="text" id="admin-panitia-pin" placeholder="Contoh: 2026" class="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:ring-1 focus:ring-primary focus:outline-none">
+                        </div>
+                        <button onclick="savePanitiaPin()" class="px-4 py-2 bg-secondary text-white text-xs font-semibold rounded-lg hover:bg-sky-700 transition">
+                            <i class="fa-solid fa-floppy-disk mr-1"></i> Simpan PIN Panitia
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Form Input Tim -->
+                <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-100 lg:col-span-1">
+                    <h3 class="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-user-plus text-primary"></i> Pendaftaran Tim Baru
+                    </h3>
+                    <form id="team-form" onsubmit="handleAddTeam(event)" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Nama Tim Voli</label>
+                            <input type="text" id="team-name" required placeholder="Contoh: SMAN 1 Jambi" class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-primary focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Jumlah Kuota Akses</label>
+                            <input type="number" id="team-quota" min="1" max="50" value="15" required class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-primary focus:outline-none">
+                            <p class="text-xs text-slate-400 mt-1">Kode unik V9 otomatis digenerate.</p>
+                        </div>
+                        <button type="submit" class="w-full py-3 bg-primary text-white font-semibold rounded-xl hover:bg-blue-900 shadow-md transition">
+                            <i class="fa-solid fa-floppy-disk mr-1"></i> Simpan & Buat ID Card
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Daftar Tim & ID Card -->
+                <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-100 lg:col-span-2">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                            <i class="fa-solid fa-id-card text-primary"></i> Daftar Tim & ID Card Siap Cetak
+                        </h3>
+                        <span id="team-count" class="text-xs bg-slate-100 text-slate-600 px-3 py-1 rounded-full font-semibold">0 Tim</span>
+                    </div>
+
+                    <div id="teams-list" class="space-y-4 max-h-[500px] overflow-y-auto pr-2">
+                        <div class="text-center py-12 text-slate-400">
+                            <i class="fa-solid fa-folder-open text-4xl mb-2"></i>
+                            <p class="text-sm">Memuat daftar tim...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. PANITIA VIEW (SCANNER & MANUAL) -->
+        <section id="view-panitia" class="hidden space-y-6">
+            <div class="bg-gradient-to-r from-secondary to-primary text-white p-6 rounded-2xl shadow-lg flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <span class="bg-white/20 text-white text-xs px-3 py-1 rounded-full uppercase tracking-wider font-semibold">Portal Panitia Scanner</span>
+                    <h2 class="text-2xl font-bold mt-1">Verifikasi Akses Masuk Harian</h2>
+                    <p class="text-sky-100 text-sm">Scan QR Code atau input manual kode V9 / Nama Tim.</p>
+                </div>
+                <div class="bg-white/10 border border-white/20 px-4 py-2 rounded-xl text-right">
+                    <p class="text-xs text-sky-200">Tanggal Aktif Akses:</p>
+                    <p id="current-date-label" class="font-bold text-sm"></p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- QR Code Scanner Box -->
+                <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-100 flex flex-col items-center">
+                    <div class="w-full flex justify-between items-center mb-3">
+                        <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                            <i class="fa-solid fa-qrcode text-secondary"></i> Kamera QR Scanner
+                        </h3>
+                        <button id="toggle-camera-btn" onclick="toggleCameraState()" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg transition flex items-center gap-1.5">
+                            <i class="fa-solid fa-video" id="cam-icon"></i> <span id="cam-btn-text">Buka Kamera</span>
+                        </button>
+                    </div>
+                    <div id="reader" class="w-full max-w-sm rounded-xl overflow-hidden border border-slate-200 bg-slate-900 aspect-square"></div>
+                    <p class="text-xs text-slate-500 mt-3 text-center">Kamera akan tertutup otomatis setelah scan berhasil.</p>
+                </div>
+
+                <!-- Manual Input & Verification Result -->
+                <div class="space-y-6">
+                    <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-100">
+                        <h3 class="text-lg font-bold text-slate-800 mb-3 flex items-center gap-2">
+                            <i class="fa-solid fa-keyboard text-secondary"></i> Input Manual Kode V9 / Tim
+                        </h3>
+                        <form onsubmit="handleManualVerify(event)" class="space-y-3">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">Kode V9 atau Nama Tim</label>
+                                <input type="text" id="manual-code" required placeholder="Contoh: V9-ABCD atau SMAN 1" class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-secondary focus:outline-none">
+                            </div>
+                            <button type="submit" class="w-full py-2.5 bg-secondary text-white font-semibold rounded-xl hover:bg-sky-700 transition shadow">
+                                <i class="fa-solid fa-check-to-slot mr-1"></i> Verifikasi Masuk
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Result Card Display -->
+                    <div id="scan-result-card" class="bg-white p-6 rounded-2xl shadow-md border border-slate-100 hidden">
+                        <h3 class="text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">Status Hasil Verifikasi</h3>
+                        <div id="result-content" class="p-4 rounded-xl"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Hidden Printable Modal / Area for ID Cards -->
+    <div id="print-modal" class="fixed inset-0 bg-black/70 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl relative">
+            <button onclick="closePrintModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 text-xl font-bold">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <h3 class="text-lg font-bold text-slate-800 mb-4">Cetak ID Card Peserta</h3>
+            
+            <div id="print-area" class="bg-gradient-to-br from-primary to-blue-900 text-white p-6 rounded-2xl shadow-xl max-w-sm mx-auto border-4 border-amber-400 text-center relative overflow-hidden">
+                <div class="absolute -right-10 -bottom-10 opacity-10 text-9xl pointer-events-none">
+                    <i class="fa-solid fa-volleyball"></i>
+                </div>
+                <div class="flex items-center justify-center gap-2 mb-1">
+                    <div class="w-7 h-7 rounded-full bg-amber-400 text-slate-900 flex items-center justify-center font-bold shadow">
+                        <i class="fa-solid fa-volleyball text-xs"></i>
+                    </div>
+                    <p class="text-xs uppercase tracking-widest text-amber-300 font-bold">SMAN 9 Kota Jambi</p>
+                </div>
+                <p class="text-[11px] font-bold uppercase tracking-wider text-blue-200 mb-2">Akses Masuk Liga SMAN 9 Kota Jambi</p>
+                <h2 id="card-team-name" class="text-2xl font-extrabold mt-1 mb-3">NAMA TIM</h2>
+                
+                <div class="bg-white p-4 rounded-xl inline-block shadow-inner my-2">
+                    <div id="card-qrcode" class="flex justify-center"></div>
+                </div>
+
+                <div class="mt-3 bg-black/30 backdrop-blur py-1.5 px-3 rounded-lg inline-block">
+                    <p class="text-xs text-slate-200">Kode Akses: <span id="card-code-text" class="font-mono font-bold text-amber-300"></span></p>
+                </div>
+                
+                <div class="mt-4 pt-3 border-t border-white/20 flex justify-between text-xs text-blue-100">
+                    <span>Kuota: <strong id="card-quota-text" class="text-white"></strong> orang</span>
+                    <span>Berlaku 1 Hari</span>
+                </div>
+            </div>
+
+            <div class="mt-6 flex gap-3">
+                <button onclick="window.print()" class="flex-1 py-3 bg-primary text-white font-semibold rounded-xl hover:bg-blue-900 transition flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-print"></i> Cetak / Print Kartu
+                </button>
+                <button onclick="closePrintModal()" class="px-5 py-3 bg-slate-200 text-slate-700 font-semibold rounded-xl hover:bg-slate-300 transition">
+                    Tutup
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-slate-200 py-4 mt-auto">
+        <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-500">
+            &copy; 2026 Turnamen Bola Voli SMAN 9 Kota Jambi. All rights reserved.
+        </div>
+    </footer>
+
+    <!-- Floating Duplicate Scan Notification Banner -->
+    <div id="floating-duplicate-alert" class="fixed top-20 left-1/2 transform -translate-x-1/2 z-50 pointer-events-none opacity-0 transition-opacity duration-300 max-w-md w-full px-4">
+        <div class="bg-amber-500 text-slate-900 px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border-2 border-amber-300">
+            <i class="fa-solid fa-triangle-exclamation text-2xl animate-bounce"></i>
+            <div>
+                <p class="font-extrabold text-sm uppercase">Peringatan Akses Ganda!</p>
+                <p id="floating-alert-msg" class="text-xs font-medium"></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script Application Logic -->
+    <script>
+        const ADMIN_PIN = "1318";
+        const DEFAULT_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwVlEEnS9gQFQxHmjCepmuG8q5wfED89NHaMshB3YCPc11qbkzoQufSMgwDJDQm61qw/exec";
+        
+        let currentUserRole = null;
+        let teamsData = [];
+        let html5QrCode = null;
+        let isCameraActive = false;
+
+        // Daftar Tim Default dari Gambar (Kuota 15 Orang)
+        const INITIAL_TEAMS = [
+            "MA AS'AD PUTRA", "MA PKP AL-HIDAYAH PUTRA", "MAN 1 SUNGAI GELAM PUTRA", "SEKOLAH RAKYAT PUTRA", 
+            "SMAN 1 MUJA PUTRA", "SMAN 10 MUJA PUTRA", "SMAN 13 KOJA PUTRA", "SMAN 17 MUJA PUTRA", 
+            "SMAN 2 KOJA PUTRA", "SMAN 2 MUJA PUTRA", "SMAN 3 KOJA PUTRA", "SMAN 5 TANJABTIM PUTRA", 
+            "SMAN 6 KOJA PUTRA", "SMAN 6 MUJA PUTRA", "SMAN 7 KOJA PUTRA", "SMAN 8 BTG HARI PUTRA", 
+            "SMAN 8 KOJA PUTRA", "SMAN 9 KOJA PUTRA", "SMK PELITA RAYA PUTRA", "SMK PGRI 2 PUTRA", 
+            "SMK YADIKA KOJA PUTRA", "SMK YKI PETALING PUTRA", "SMKN 10 MUJA PUTRA", "SMKN 6 KOJA PUTRA", 
+            "MA PKP AL-HIDAYAH PUTRI", "MAN 1 SUNGAI GELAM PUTRI", "SMAN 10 MUJA PUTRI", "SMAN 12 KOJA PUTRI", 
+            "SMAN 13 KOJA PUTRI", "SMAN 2 MUJA PUTRI", "SMAN 3 KOJA PUTRI", "SMAN 5 TANJABTIM PUTRI", 
+            "SMAN 6 KOJA PUTRI", "SMAN 8 KOJA PUTRI", "SMAN 9 KOJA PUTRI", "SMK PELITA RAYA PUTRI", 
+            "SMK PGRI 2 PUTRI", "SMKN 10 MUJA PUTRI", "MTS NURUI IKSAN PUTRI", "MTS PKP AL-HIDAYAH PUTRI", 
+            "MTSN 8 BTG.HARI PUTRI", "SMPN 2 MUJA PUTRI", "SMPN 23 MUJA PUTRI", "SMPN 32 MUJA PUTRI", 
+            "SMPN 6 KOJA PUTRI", "SMPN 8 MUJA PUTRI", "SMPN15 KOJA PUTRI"
+        ];
+
+        window.onload = function() {
+            const todayStr = new Date().toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            document.getElementById('current-date-label').innerText = todayStr;
+
+            localStorage.setItem('volsman9_script_url', DEFAULT_SCRIPT_URL);
+
+            loadLocalData();
+            if (teamsData.length === 0) {
+                initDefaultTeams();
+            }
+            checkDailyReset();
+            
+            const savedPin = localStorage.getItem('volsman9_panitia_pin') || '2026';
+            const panitiaPinInput = document.getElementById('admin-panitia-pin');
+            if (panitiaPinInput) panitiaPinInput.value = savedPin;
+            
+            toggleCodeField();
+        };
+
+        function loadLocalData() {
+            try {
+                const data = localStorage.getItem('volsman9_teams');
+                if (data) {
+                    teamsData = JSON.parse(data);
+                }
+            } catch (e) {
+                teamsData = [];
+            }
+        }
+
+        function saveLocalData() {
+            localStorage.setItem('volsman9_teams', JSON.stringify(teamsData));
+        }
+
+        function checkDailyReset() {
+            const today = new Date().toDateString();
+            const lastDate = localStorage.getItem('volsman9_last_reset_date');
+            if (lastDate !== today) {
+                teamsData.forEach(t => {
+                    t.checkedInToday = 0;
+                    t.lastCheckinTime = "";
+                });
+                saveLocalData();
+                localStorage.setItem('volsman9_last_reset_date', today);
+            }
+        }
+
+        function syncDataFromCloud(callback) {
+            const scriptUrl = DEFAULT_SCRIPT_URL;
+            if (!scriptUrl) {
+                if (callback) callback();
+                return;
+            }
+
+            const overlay = document.getElementById('loading-overlay');
+            if (overlay) overlay.classList.remove('hidden');
+
+            fetch(scriptUrl + '?action=getTeams')
+                .then(res => res.json())
+                .then(res => {
+                    if (overlay) overlay.classList.add('hidden');
+                    if (res && res.status === 'success' && Array.isArray(res.data) && res.data.length > 0) {
+                        teamsData = res.data;
+                        saveLocalData();
+                    }
+                    if (callback) callback();
+                })
+                .catch(err => {
+                    if (overlay) overlay.classList.add('hidden');
+                    console.log("Cloud sync fallback to local: ", err);
+                    if (callback) callback();
+                });
+        }
+
+        function initDefaultTeams() {
+            teamsData = INITIAL_TEAMS.map((name, index) => {
+                const codeSuffix = (index + 101).toString();
+                return {
+                    id: "team_" + index + "_" + Date.now(),
+                    name: name,
+                    quota: 15,
+                    code: `V9-${codeSuffix}`,
+                    checkedInToday: 0,
+                    lastCheckinTime: "",
+                    createdAt: new Date().toISOString()
+                };
+            });
+            saveLocalData();
+        }
+
+        function savePanitiaPin() {
+            const pin = document.getElementById('admin-panitia-pin').value.trim();
+            if (!pin) {
+                showModal("Error", "PIN Panitia tidak boleh kosong!", "error");
+                return;
+            }
+            localStorage.setItem('volsman9_panitia_pin', pin);
+            showModal("Berhasil", "PIN Panitia berhasil diperbarui!", "success");
+        }
+
+        function handleAddTeam(e) {
+            e.preventDefault();
+            const name = document.getElementById('team-name').value.trim();
+            const quota = parseInt(document.getElementById('team-quota').value) || 15;
+            
+            const randomCodeNum = Math.floor(1000 + Math.random() * 9000);
+            const code = `V9-${randomCodeNum}`;
+
+            const newTeam = {
+                id: "team_" + Date.now(),
+                name: name,
+                quota: quota,
+                code: code,
+                checkedInToday: 0,
+                lastCheckinTime: "",
+                createdAt: new Date().toISOString()
+            };
+
+            teamsData.push(newTeam);
+            saveLocalData();
+
+            document.getElementById('team-form').reset();
+            document.getElementById('team-quota').value = 15;
+            renderAdminTeams();
+            showModal("Berhasil", `Tim ${name} berhasil ditambahkan dengan kode ${code}!`, "success");
+
+            const scriptUrl = DEFAULT_SCRIPT_URL;
+            if (scriptUrl) {
+                fetch(scriptUrl, {
+                    method: 'POST',
+                    body: JSON.stringify({ action: 'saveTeam', team: newTeam })
+                }).catch(err => console.log(err));
+            }
+        }
+
+        function renderAdminTeams() {
+            const container = document.getElementById('teams-list');
+            const countEl = document.getElementById('team-count');
+            if (!container) return;
+
+            countEl.innerText = `${teamsData.length} Tim`;
+
+            if (teamsData.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-12 text-slate-400">
+                        <i class="fa-solid fa-folder-open text-4xl mb-2"></i>
+                        <p class="text-sm">Belum ada tim terdaftar.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = teamsData.map(team => `
+                <div class="p-4 rounded-xl border border-slate-200 bg-slate-50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                    <div>
+                        <h4 class="font-bold text-slate-800 text-base">${team.name}</h4>
+                        <div class="flex flex-wrap items-center gap-3 mt-1 text-xs text-slate-600">
+                            <span>Kode: <strong class="text-primary font-mono">${team.code}</strong></span>
+                            <span>Kuota: <strong class="text-slate-800">${team.checkedInToday || 0} / ${team.quota}</strong></span>
+                            <span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-medium">Hadir: ${team.checkedInToday || 0}</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
+                        <button onclick="openPrintCard('${team.id}')" class="px-3 py-2 bg-secondary text-white text-xs font-semibold rounded-lg hover:bg-sky-700 transition flex items-center gap-1.5">
+                            <i class="fa-solid fa-id-card"></i> ID Card
+                        </button>
+                        <button onclick="deleteTeam('${team.id}')" class="px-3 py-2 bg-red-100 text-red-700 hover:bg-red-200 text-xs font-semibold rounded-lg transition">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function deleteTeam(id) {
+            if (!confirm("Apakah Anda yakin ingin menghapus tim ini?")) return;
+            teamsData = teamsData.filter(t => t.id !== id);
+            saveLocalData();
+            renderAdminTeams();
+
+            const scriptUrl = DEFAULT_SCRIPT_URL;
+            if (scriptUrl) {
+                fetch(scriptUrl, {
+                    method: 'POST',
+                    body: JSON.stringify({ action: 'deleteTeam', id: id })
+                }).catch(err => console.log(err));
+            }
+        }
+
+        function openPrintCard(id) {
+            const team = teamsData.find(t => t.id === id);
+            if (!team) return;
+
+            document.getElementById('card-team-name').innerText = team.name;
+            document.getElementById('card-code-text').innerText = team.code;
+            document.getElementById('card-quota-text').innerText = team.quota;
+
+            const qrcodeContainer = document.getElementById('card-qrcode');
+            qrcodeContainer.innerHTML = "";
+            new QRCode(qrcodeContainer, {
+                text: team.code,
+                width: 150,
+                height: 150,
+                colorDark: "#000000",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.H
+            });
+
+            document.getElementById('print-modal').classList.remove('hidden');
+        }
+
+        function closePrintModal() {
+            document.getElementById('print-modal').classList.add('hidden');
+        }
+
+        function toggleCodeField() {
+            const role = document.getElementById('login-role').value;
+            const codeLabel = document.getElementById('code-label');
+            const codeInput = document.getElementById('login-code');
+            const codeHint = document.getElementById('code-hint');
+
+            if (role === 'admin') {
+                codeLabel.innerText = "PIN Admin";
+                codeInput.placeholder = "Masukkan PIN Akses";
+                codeHint.innerText = "Masukkan PIN rahasia administrator (1318).";
+            } else {
+                codeLabel.innerText = "Kode Akses Panitia";
+                codeInput.placeholder = "Masukkan Kode Akses Panitia";
+                codeHint.innerText = "Masukkan kode akses panitia.";
+            }
+        }
+
+        function handleLogin(e) {
+            e.preventDefault();
+            const role = document.getElementById('login-role').value;
+            const code = document.getElementById('login-code').value;
+
+            if (role === 'admin') {
+                if (code !== ADMIN_PIN) {
+                    showModal("Akses Ditolak", "Kode PIN Admin salah! Gunakan PIN 1318.", "error");
+                    return;
+                }
+                currentUserRole = 'admin';
+                showView('admin');
+                syncDataFromCloud(renderAdminTeams);
+            } else {
+                const savedPanitiaPin = localStorage.getItem('volsman9_panitia_pin') || "2026";
+                if (code !== savedPanitiaPin) {
+                    showModal("Akses Ditolak", "Kode Akses Panitia salah! Masukkan PIN yang ditentukan Admin.", "error");
+                    return;
+                }
+                currentUserRole = 'panitia';
+                showView('panitia');
+                syncDataFromCloud(() => {
+                    setTimeout(() => {
+                        startScannerEngine();
+                    }, 100);
+                });
+            }
+
+            document.getElementById('user-status').classList.remove('hidden');
+            document.getElementById('user-badge').innerText = role === 'admin' ? 'Administrator' : 'Panitia Scanner';
+        }
+
+        function logout() {
+            currentUserRole = null;
+            document.getElementById('user-status').classList.add('hidden');
+            document.getElementById('login-code').value = '';
+            if (html5QrCode && html5QrCode.isScanning) {
+                html5QrCode.stop().catch(err => console.log(err));
+            }
+            showView('login');
+        }
+
+        function showView(viewName) {
+            document.getElementById('view-login').classList.add('hidden');
+            document.getElementById('view-admin').classList.add('hidden');
+            document.getElementById('view-panitia').classList.add('hidden');
+
+            if (viewName === 'login') {
+                document.getElementById('view-login').classList.remove('hidden');
+                stopScanner();
+            }
+            if (viewName === 'admin') {
+                document.getElementById('view-admin').classList.remove('hidden');
+                stopScanner();
+            }
+            if (viewName === 'panitia') {
+                document.getElementById('view-panitia').classList.remove('hidden');
+                stopScanner();
+            }
+        }
+
+        function stopScanner() {
+            if (html5QrCode) {
+                try {
+                    html5QrCode.stop().then(() => {
+                        html5QrCode.clear();
+                    }).catch(e => {});
+                } catch(e) {}
+            }
+            isCameraActive = false;
+            updateCameraUI();
+        }
+
+        function toggleCameraState() {
+            if (isCameraActive) {
+                stopScanner();
+            } else {
+                startScannerEngine();
+            }
+        }
+
+        function updateCameraUI() {
+            const btnText = document.getElementById('cam-btn-text');
+            const camIcon = document.getElementById('cam-icon');
+            const btn = document.getElementById('toggle-camera-btn');
+            const readerEl = document.getElementById("reader");
+
+            if (isCameraActive) {
+                btnText.innerText = "Tutup Kamera";
+                camIcon.className = "fa-solid fa-video-slash";
+                btn.className = "px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-lg transition flex items-center gap-1.5";
+            } else {
+                btnText.innerText = "Buka Kamera";
+                camIcon.className = "fa-solid fa-video";
+                btn.className = "px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg transition flex items-center gap-1.5";
+                if (readerEl) {
+                    readerEl.innerHTML = `<div class="flex flex-col items-center justify-center h-full text-slate-400 p-4 text-center"><i class="fa-solid fa-camera-slash text-3xl mb-2"></i><p class="text-xs">Kamera dalam keadaan mati. Klik tombol "Buka Kamera" untuk mulai scan.</p></div>`;
+                }
+            }
+        }
+
+        function startScannerEngine() {
+            const readerEl = document.getElementById("reader");
+            if (!readerEl) return;
+            readerEl.innerHTML = "";
+
+            if (html5QrCode) {
+                try { html5QrCode.clear(); } catch(e) {}
+            }
+
+            html5QrCode = new Html5Qrcode("reader");
+            const config = { fps: 15, qrbox: { width: 240, height: 240 } };
+            
+            html5QrCode.start(
+                { facingMode: "environment" }, 
+                config, 
+                onScanSuccess, 
+                onScanFailure
+            ).then(() => {
+                isCameraActive = true;
+                updateCameraUI();
+            }).catch(err => {
+                html5QrCode.start(
+                    { facingMode: "user" }, 
+                    config, 
+                    onScanSuccess, 
+                    onScanFailure
+                ).then(() => {
+                    isCameraActive = true;
+                    updateCameraUI();
+                }).catch(err2 => {
+                    console.log("Scanner camera error: ", err2);
+                    showModal("Akses Kamera", "Gagal membuka kamera. Pastikan izin kamera diaktifkan di browser Anda.", "error");
+                });
+            });
+        }
+
+        function onScanSuccess(decodedText) {
+            stopScanner();
+            verifyAndProcessCode(decodedText.trim());
+        }
+
+        function onScanFailure(error) {}
+
+        function handleManualVerify(e) {
+            e.preventDefault();
+            const inputVal = document.getElementById('manual-code').value.trim();
+            verifyAndProcessCode(inputVal);
+            document.getElementById('manual-code').value = '';
+        }
+
+        function verifyAndProcessCode(codeKey) {
+            checkDailyReset();
+
+            const teamIndex = teamsData.findIndex(t => 
+                t.code.toLowerCase() === codeKey.toLowerCase() || 
+                t.name.toLowerCase() === codeKey.toLowerCase()
+            );
+
+            const cardBox = document.getElementById('scan-result-card');
+            const contentBox = document.getElementById('result-content');
+            cardBox.classList.remove('hidden');
+
+            if (teamIndex === -1) {
+                contentBox.className = "p-4 rounded-xl bg-red-50 border border-red-200 text-red-800";
+                contentBox.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <i class="fa-solid fa-circle-xmark text-3xl text-red-500"></i>
+                        <div>
+                            <h4 class="font-bold">Akses Ditolak!</h4>
+                            <p class="text-xs mt-0.5">Kode/Tim <strong>"${codeKey}"</strong> tidak terdaftar.</p>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            let team = teamsData[teamIndex];
+            const currentChecked = team.checkedInToday || 0;
+            
+            if (currentChecked >= team.quota) {
+                showFloatingDuplicateAlert(`Tim ${team.name} (${team.code}) sudah mencapai batas maksimal kuota (${team.quota} orang)!`);
+                contentBox.className = "p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-800";
+                contentBox.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <i class="fa-solid fa-triangle-exclamation text-3xl text-amber-500"></i>
+                        <div>
+                            <h4 class="font-bold">Kuota Telah Habis Hari Ini!</h4>
+                            <p class="text-xs mt-0.5">Tim <strong>${team.name}</strong> (${team.code}) sudah menggunakan seluruh kuota (${currentChecked}/${team.quota}).</p>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            if (currentChecked > 0 && team.lastCheckinTime) {
+                showFloatingDuplicateAlert(`Perhatian: Tim ${team.name} sudah melakukan check-in sebelumnya pada pukul ${team.lastCheckinTime}!`);
+            }
+
+            team.checkedInToday = currentChecked + 1;
+            const remainingQuota = team.quota - team.checkedInToday;
+            team.lastCheckinTime = new Date().toLocaleTimeString('id-ID');
+            teamsData[teamIndex] = team;
+            saveLocalData();
+
+            contentBox.className = "p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800";
+            contentBox.innerHTML = `
+                <div class="flex items-center gap-3">
+                    <i class="fa-solid fa-circle-check text-3xl text-emerald-500"></i>
+                    <div>
+                        <h4 class="font-bold text-emerald-900">Akses Masuk DITERIMA!</h4>
+                        <p class="text-xs mt-1">Tim: <strong class="text-slate-800">${team.name}</strong> (${team.code})</p>
+                        <div class="mt-2 flex flex-wrap gap-2">
+                            <span class="text-xs font-bold bg-emerald-200 text-emerald-900 px-2 py-1 rounded">
+                                Hadir Hari Ini: ${team.checkedInToday} / ${team.quota} orang
+                            </span>
+                            <span class="text-xs font-bold bg-blue-200 text-blue-900 px-2 py-1 rounded">
+                                Sisa Kuota: ${remainingQuota} orang
+                            </span>
+                        </div>
+                        <p class="text-[10px] text-slate-400 mt-2">Waktu Scan: ${team.lastCheckinTime}</p>
+                    </div>
+                </div>
+            `;
+
+            const scriptUrl = DEFAULT_SCRIPT_URL;
+            if (scriptUrl) {
+                fetch(scriptUrl, {
+                    method: 'POST',
+                    body: JSON.stringify({ action: 'updateCheckin', code: team.code })
+                }).catch(err => console.log(err));
+            }
+        }
+
+        function showFloatingDuplicateAlert(message) {
+            const alertBox = document.getElementById('floating-duplicate-alert');
+            const msgEl = document.getElementById('floating-alert-msg');
+            msgEl.innerText = message;
+
+            alertBox.classList.remove('opacity-0', 'pointer-events-none');
+            alertBox.classList.add('opacity-100');
+
+            setTimeout(() => {
+                alertBox.classList.remove('opacity-100');
+                alertBox.classList.add('opacity-0', 'pointer-events-none');
+            }, 4000);
+        }
+
+        function showModal(title, message, type = "success") {
+            const modal = document.getElementById('custom-modal');
+            const titleEl = document.getElementById('modal-title');
+            const msgEl = document.getElementById('modal-message');
+            const iconEl = document.getElementById('modal-icon');
+
+            titleEl.innerText = title;
+            msgEl.innerText = message;
+
+            if (type === "success") {
+                iconEl.className = "w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl bg-emerald-100 text-emerald-600";
+                iconEl.innerHTML = '<i class="fa-solid fa-check"></i>';
+            } else {
+                iconEl.className = "w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl bg-red-100 text-red-600";
+                iconEl.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i>';
+            }
+
+            modal.classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('custom-modal').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>
